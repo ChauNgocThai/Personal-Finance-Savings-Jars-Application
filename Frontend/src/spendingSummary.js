@@ -32,6 +32,27 @@ function addYearsClamped(date, amount) {
   return new Date(targetYear, date.getMonth(), Math.min(date.getDate(), lastDay))
 }
 
+export function shiftSelectedDate(selectedDate, period, direction, preferredDate = selectedDate) {
+  if (!VALID_PERIODS.has(period)) throw new RangeError(`Unsupported period: ${period}`)
+  if (direction !== -1 && direction !== 1) throw new RangeError('Direction must be -1 or 1.')
+  const selected = parseLocalDate(selectedDate)
+  const preferred = parseLocalDate(preferredDate)
+  if (!selected || !preferred) throw new RangeError('Dates must be valid YYYY-MM-DD calendar dates.')
+
+  if (period === 'day' || period === 'week') {
+    return toDateKey(addDays(selected, direction * (period === 'day' ? 1 : 7)))
+  }
+  if (period === 'month') {
+    const targetMonth = new Date(selected.getFullYear(), selected.getMonth() + direction, 1)
+    const lastDay = new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0).getDate()
+    return toDateKey(new Date(targetMonth.getFullYear(), targetMonth.getMonth(), Math.min(preferred.getDate(), lastDay)))
+  }
+
+  const targetYear = selected.getFullYear() + direction
+  const lastDay = new Date(targetYear, preferred.getMonth() + 1, 0).getDate()
+  return toDateKey(new Date(targetYear, preferred.getMonth(), Math.min(preferred.getDate(), lastDay)))
+}
+
 function isSameWeek(first, second) {
   const firstMonday = addDays(first, -((first.getDay() + 6) % 7))
   const secondMonday = addDays(second, -((second.getDay() + 6) % 7))

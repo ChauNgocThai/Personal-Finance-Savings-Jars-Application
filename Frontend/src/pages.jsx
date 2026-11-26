@@ -5,6 +5,8 @@ import {
   getDashboard, 
   getTransactions, 
   getCategories, 
+  getSmartSpendingSummary,
+  smartSpendingSummaryQueryKey,
   deleteTransaction, 
   getJars, 
   createJar, 
@@ -14,6 +16,7 @@ import {
   deleteCategory,
   setMonthlyIncome
 } from './api'
+import { shiftSelectedDate } from './spendingSummary'
 
 const vnd = (n) => (n || 0).toLocaleString('vi-VN') + ' đ'
 const colorMap = { ok: 'bg-sage', warning: 'bg-amber', exceeded: 'bg-alert' }
@@ -132,6 +135,190 @@ function JarCard({ j }) {
   )
 }
 
+const summaryPeriods = [
+  { value: 'day', label: 'Ngày' },
+  { value: 'week', label: 'Tuần' },
+  { value: 'month', label: 'Tháng' },
+  { value: 'year', label: 'Năm' }
+]
+
+const localDateKey = () => {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+}
+
+function SmartSpendingSummary() {
+  const [period, setPeriod] = useState('month')
+  const [selectedDate, setSelectedDate] = useState(localDateKey)
+  const [navigationAnchorDate, setNavigationAnchorDate] = useState(localDateKey)
+  const todayDate = localDateKey()
+  const nextDate = shiftSelectedDate(selectedDate, period, 1, navigationAnchorDate)
+  const { data, isLoading, error } = useQuery({
+    queryKey: smartSpendingSummaryQueryKey(period, selectedDate),
+    queryFn: () => getSmartSpendingSummary({ period, selectedDate, todayDate })
+  })
+
+  const changeDate = (direction) => setSelectedDate((current) => shiftSelectedDate(current, period, direction, navigationAnchorDate))
+  const selectPeriod = (nextPeriod) => {
+    setPeriod(nextPeriod)
+    setNavigationAnchorDate(selectedDate)
+  }
+  const changeClass = (change) => change > 0
+    ? 'text-alert'
+    : change < 0
+      ? 'text-sage'
+      : 'text-gray-500 dark:text-gray-400'
+  const changeLabel = (change, percent) => {
+    if (change === 0) return 'Không đổi'
+    const sign = change > 0 ? '+' : '−'
+    const percentage = percent === null ? '' : ` (${Math.abs(percent)}%)`
+    return `${sign}${vnd(Math.abs(change))}${percentage}`
+  }
+
+  return (
+    <Card>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h3 className="flex items-center gap-2 font-bold text-ink">
+            <span aria-hidden="true">✨</span> Tóm tắt thông minh
+          </h3>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Kỳ này: {data?.currentRange.label || selectedDate} · So sánh: {data?.previousRange.label || 'kỳ liền trước'}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex gap-1 rounded-xl bg-mist p-1 dark:bg-gray-800" aria-label="Chọn khoảng thời gian">
+            {summaryPeriods.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={period === option.value}
+                onClick={() => selectPeriod(option.value)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
+                  period === option.value
+                    ? 'bg-white text-ink shadow-sm dark:bg-gray-900 dark:text-gray-100'
+                    : 'text-gray-500 hover:text-ink dark:text-gray-400 dark:hover:text-white'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => changeDate(-1)}
+              aria-label="Xem kỳ trước"
+              className="rounded-lg bg-mist px-3 py-1.5 text-sm font-bold text-ink hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedDate(todayDate)
+                setNavigationAnchorDate(todayDate)
+              }}
+              disabled={selectedDate === todayDate}
+              className="rounded-lg bg-mist px-3 py-1.5 text-xs font-semibold text-ink hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+            >
+              Hôm nay
+            </button>
+            <button
+              type="button"
+              onClick={() => changeDate(1)}
+              disabled={nextDate > todayDate}
+              aria-label="Xem kỳ sau"
+              className="rounded-lg bg-mist px-3 py-1.5 text-sm font-bold text-ink hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+            >
+              ›
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {period === 'day' && selectedDate === todayDate && (
+        <p className="mt-3 rounded-xl bg-amber/10 px-3 py-2 text-xs text-gray-600 dark:text-gray-300">
+          So sánh tổng chi cả ngày; giao dịch hiện chưa lưu giờ nên chưa thể so cùng thời điểm trong ngày.
+        </p>
+      )}
+
+      {isLoading ? (
+        <p className="mt-5 text-sm text-gray-500 dark:text-gray-400" role="status">Đang tổng hợp chi tiêu…</p>
+      ) : error ? (
+        <p className="mt-5 text-sm font-medium text-alert" role="alert">Không thể tải tóm tắt chi tiêu. Vui lòng thử lại.</p>
+      ) : data ? (
+        <>
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-xl bg-mist/70 p-3 dark:bg-gray-800/70">
+              <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">Chi tiêu kỳ này</div>
+              <div className="mt-1 font-bold text-ink dark:text-gray-100">{vnd(data.currentTotal)}</div>
+              <div className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">{data.currentRange.label}</div>
+            </div>
+            <div className="rounded-xl bg-mist/70 p-3 dark:bg-gray-800/70">
+              <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">Kỳ so sánh</div>
+              <div className="mt-1 font-bold text-ink dark:text-gray-100">{vnd(data.previousTotal)}</div>
+              <div className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">{data.previousRange.label}</div>
+            </div>
+            <div className="rounded-xl bg-mist/70 p-3 dark:bg-gray-800/70">
+              <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">Chênh lệch</div>
+              <div className={`mt-1 font-bold ${changeClass(data.change)}`}>
+                {changeLabel(data.change, data.changePercent)}
+              </div>
+              <div className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+                {data.change > 0 ? 'Chi tiêu tăng' : data.change < 0 ? 'Chi tiêu giảm' : 'Không thay đổi'}
+              </div>
+            </div>
+          </div>
+
+          <p className="mt-4 rounded-xl border border-sage/20 bg-sage/5 px-3 py-2.5 text-sm font-medium text-ink dark:text-gray-100">
+            {data.insight}
+          </p>
+
+          {data.categories.length > 0 ? (
+            <div className="mt-4 space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">Chi tiết theo danh mục</h4>
+              {data.categories.map((category) => (
+                <div key={category.key} className="rounded-xl border border-gray-100 p-3 dark:border-gray-800">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="font-semibold text-ink dark:text-gray-100">
+                        <span className="mr-1.5" aria-hidden="true">{category.icon}</span>{category.name}
+                        {category.status === 'new' && <span className="ml-2 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-600 dark:bg-blue-950 dark:text-blue-400">Mới phát sinh</span>}
+                        {category.status === 'stopped' && <span className="ml-2 rounded-full bg-mist px-2 py-0.5 text-[10px] font-bold text-gray-600 dark:bg-gray-800 dark:text-gray-300">Không phát sinh kỳ này</span>}
+                      </div>
+                      <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Kỳ này {vnd(category.amount)} · Kỳ trước {vnd(category.previousAmount)}
+                      </div>
+                    </div>
+                    <span className={`shrink-0 text-xs font-bold ${changeClass(category.change)}`}>
+                      {changeLabel(category.change, category.changePercent)}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-center gap-2">
+                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-mist dark:bg-gray-800" aria-label={`Tỷ trọng chi tiêu ${category.share}%`}>
+                      <div className="h-full rounded-full bg-sage" style={{ width: `${Math.min(category.share, 100)}%` }} />
+                    </div>
+                    <span className="w-9 text-right text-[11px] font-semibold text-gray-500 dark:text-gray-400">{category.share}%</span>
+                  </div>
+                  {(data.largestIncrease?.key === category.key || data.largestDecrease?.key === category.key) && (
+                    <div className="mt-1 text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+                      {data.largestIncrease?.key === category.key ? 'Danh mục tăng nhiều nhất theo số tiền' : 'Danh mục giảm nhiều nhất theo số tiền'}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">Không có khoản chi nào trong hai kỳ so sánh.</p>
+          )}
+        </>
+      ) : null}
+    </Card>
+  )
+}
+
 // DASHBOARD PAGE
 export function Dashboard() {
   const { data } = useQuery({ queryKey: ['dashboard'], queryFn: getDashboard })
@@ -192,6 +379,8 @@ export function Dashboard() {
           </div>
         </Card>
       </div>
+
+      <SmartSpendingSummary />
 
       {/* Spending Analytics Chart */}
       <Card>
