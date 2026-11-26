@@ -1,7 +1,13 @@
 // api.js
+import { getSmartSpendingSummary as buildSmartSpendingSummary } from './spendingSummary.js'
+
 const STORAGE_KEY = 'fintrack_local_db_v1'
 const DB_KEY = 'PERSONAL_FINANCE_DB_V1'
 const todayStr = () => new Date().toISOString().slice(0, 10)
+const localTodayStr = () => {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+}
 const currentMonthStr = () => new Date().toISOString().slice(0, 7) // "YYYY-MM"
 
 const defaultDb = {
@@ -61,6 +67,23 @@ export const getCategories = () => {
 export const getTransactions = () => {
   const db = loadDb()
   return wait([...db.transactions].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id))
+}
+
+export const smartSpendingSummaryQueryKey = (period, selectedDate) => [
+  'smart-spending-summary',
+  period,
+  selectedDate
+]
+
+export const getSmartSpendingSummary = ({ period = 'month', selectedDate = localTodayStr(), todayDate = localTodayStr() } = {}) => {
+  const db = loadDb()
+  return wait(buildSmartSpendingSummary({
+    transactions: db.transactions,
+    categories: db.categories,
+    period,
+    selectedDate,
+    todayDate
+  }))
 }
 
 export const addTransaction = (t) => {
