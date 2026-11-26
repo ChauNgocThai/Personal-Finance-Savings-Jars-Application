@@ -16,7 +16,6 @@ import {
   deleteCategory,
   setMonthlyIncome
 } from './api'
-import { shiftSelectedDate } from './spendingSummary'
 
 const vnd = (n) => (n || 0).toLocaleString('vi-VN') + ' đ'
 const colorMap = { ok: 'bg-sage', warning: 'bg-amber', exceeded: 'bg-alert' }
@@ -150,18 +149,31 @@ const localDateKey = () => {
 function SmartSpendingSummary() {
   const [period, setPeriod] = useState('month')
   const [selectedDate, setSelectedDate] = useState(localDateKey)
-  const [navigationAnchorDate, setNavigationAnchorDate] = useState(localDateKey)
   const todayDate = localDateKey()
-  const nextDate = shiftSelectedDate(selectedDate, period, 1, navigationAnchorDate)
   const { data, isLoading, error } = useQuery({
     queryKey: smartSpendingSummaryQueryKey(period, selectedDate),
     queryFn: () => getSmartSpendingSummary({ period, selectedDate, todayDate })
   })
 
-  const changeDate = (direction) => setSelectedDate((current) => shiftSelectedDate(current, period, direction, navigationAnchorDate))
-  const selectPeriod = (nextPeriod) => {
-    setPeriod(nextPeriod)
-    setNavigationAnchorDate(selectedDate)
+  const selectMonth = (monthValue) => {
+    if (!monthValue) return
+    const [year, month] = monthValue.split('-').map(Number)
+    const preferredDay = Number(selectedDate.slice(8, 10))
+    const lastDay = new Date(year, month, 0).getDate()
+    const candidate = `${year}-${String(month).padStart(2, '0')}-${String(Math.min(preferredDay, lastDay)).padStart(2, '0')}`
+    setSelectedDate(candidate > todayDate ? todayDate : candidate)
+  }
+  const selectYear = (yearValue) => {
+    if (!yearValue) return
+    const year = Number(yearValue)
+    const month = Number(selectedDate.slice(5, 7))
+    const preferredDay = Number(selectedDate.slice(8, 10))
+    const lastDay = new Date(year, month, 0).getDate()
+    const candidate = `${year}-${String(month).padStart(2, '0')}-${String(Math.min(preferredDay, lastDay)).padStart(2, '0')}`
+    setSelectedDate(candidate > todayDate ? todayDate : candidate)
+  }
+  const selectDate = (dateValue) => {
+    if (dateValue && dateValue <= todayDate) setSelectedDate(dateValue)
   }
   const changeClass = (change) => change > 0
     ? 'text-alert'
@@ -194,7 +206,7 @@ function SmartSpendingSummary() {
                 key={option.value}
                 type="button"
                 aria-pressed={period === option.value}
-                onClick={() => selectPeriod(option.value)}
+                onClick={() => setPeriod(option.value)}
                 className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
                   period === option.value
                     ? 'bg-white text-ink shadow-sm dark:bg-gray-900 dark:text-gray-100'
@@ -205,34 +217,56 @@ function SmartSpendingSummary() {
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {(period === 'day' || period === 'week') && (
+              <label className="sr-only" htmlFor="smart-summary-date">Chọn ngày</label>
+            )}
+            {period === 'day' || period === 'week' ? (
+              <input
+                id="smart-summary-date"
+                type="date"
+                value={selectedDate}
+                max={todayDate}
+                onChange={(event) => selectDate(event.target.value)}
+                aria-label={period === 'day' ? 'Chọn ngày cần xem' : 'Chọn ngày trong tuần cần xem'}
+                className="rounded-lg border border-gray-200 bg-mist px-3 py-1.5 text-xs font-semibold text-ink dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+              />
+            ) : period === 'month' ? (
+              <>
+                <label className="sr-only" htmlFor="smart-summary-month">Chọn tháng</label>
+                <input
+                  id="smart-summary-month"
+                  type="month"
+                  value={selectedDate.slice(0, 7)}
+                  max={todayDate.slice(0, 7)}
+                  onChange={(event) => selectMonth(event.target.value)}
+                  aria-label="Chọn tháng cần xem"
+                  className="rounded-lg border border-gray-200 bg-mist px-3 py-1.5 text-xs font-semibold text-ink dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                />
+              </>
+            ) : (
+              <>
+                <label className="sr-only" htmlFor="smart-summary-year">Chọn năm</label>
+                <input
+                  id="smart-summary-year"
+                  type="number"
+                  inputMode="numeric"
+                  min="1900"
+                  max={todayDate.slice(0, 4)}
+                  value={selectedDate.slice(0, 4)}
+                  onChange={(event) => selectYear(event.target.value)}
+                  aria-label="Chọn năm cần xem"
+                  className="w-24 rounded-lg border border-gray-200 bg-mist px-3 py-1.5 text-xs font-semibold text-ink dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                />
+              </>
+            )}
             <button
               type="button"
-              onClick={() => changeDate(-1)}
-              aria-label="Xem kỳ trước"
-              className="rounded-lg bg-mist px-3 py-1.5 text-sm font-bold text-ink hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
-            >
-              ‹
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedDate(todayDate)
-                setNavigationAnchorDate(todayDate)
-              }}
+              onClick={() => setSelectedDate(todayDate)}
               disabled={selectedDate === todayDate}
               className="rounded-lg bg-mist px-3 py-1.5 text-xs font-semibold text-ink hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
             >
               Hôm nay
-            </button>
-            <button
-              type="button"
-              onClick={() => changeDate(1)}
-              disabled={nextDate > todayDate}
-              aria-label="Xem kỳ sau"
-              className="rounded-lg bg-mist px-3 py-1.5 text-sm font-bold text-ink hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
-            >
-              ›
             </button>
           </div>
         </div>

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { getComparableRanges, getSmartSpendingSummary, shiftSelectedDate } from './spendingSummary.js'
+import { getComparableRanges, getSmartSpendingSummary } from './spendingSummary.js'
 
 const categories = [
   { id: 1, name: 'Ăn uống', icon: '🍜' },
@@ -228,13 +228,3 @@ test('rejects invalid periods, invalid calendar dates, and future selections', (
   assert.throws(() => getComparableRanges({ period: 'day', selectedDate: '2026-11-27', todayDate: '2026-11-26' }), RangeError)
 })
 
-test('shifts dashboard selections by period and clamps month/year navigation', () => {
-  assert.equal(shiftSelectedDate('2026-11-26', 'day', 1), '2026-11-27')
-  assert.equal(shiftSelectedDate('2026-11-26', 'week', -1), '2026-11-19')
-  assert.equal(shiftSelectedDate('2025-01-31', 'month', 1), '2025-02-28')
-  assert.equal(shiftSelectedDate('2024-01-31', 'month', 1), '2024-02-29')
-  assert.equal(shiftSelectedDate('2028-02-29', 'year', -1), '2027-02-28')
-  assert.equal(shiftSelectedDate('2025-02-28', 'month', 1, '2025-01-31'), '2025-03-31')
-  assert.equal(shiftSelectedDate('2027-02-28', 'year', 1, '2028-02-29'), '2028-02-29')
-  assert.throws(() => shiftSelectedDate('2026-11-26', 'month', 0), RangeError)
-})
