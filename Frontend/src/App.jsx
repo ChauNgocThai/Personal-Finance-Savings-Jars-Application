@@ -276,7 +276,7 @@ export default function App() {
     }
 
     if (preferences.background) {
-      const overlay = isDark ? 'rgba(11, 15, 25, 0.56)' : 'rgba(243, 245, 247, 0.45)'
+      const overlay = isDark ? 'rgba(11, 15, 25, 0.78)' : 'rgba(243, 245, 247, 0.78)'
       document.body.style.backgroundImage = `linear-gradient(${overlay}, ${overlay}), url("${preferences.background}")`
       document.body.style.backgroundSize = 'cover'
       document.body.style.backgroundPosition = 'center'

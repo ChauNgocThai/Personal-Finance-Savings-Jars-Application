@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 @theme { 
   --font-sans:"Be Vietnam Pro",system-ui,sans-serif; 
   --color-ink:#1f2a44; 
@@ -9,13 +10,14 @@
 }
 
 body {
-  background-color: #f3f5f7; /* Màu sáng mặc định cho Light mode */
+  background-color: #f3f5f7;
   color: #1f2a44;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .dark body {
-  background-color: #0b0f19 !important; /* Nền tối sâu cho Dark mode */
+  color-scheme: dark;
+  background-color: #0b0f19 !important;
   color: #f3f5f7 !important;
 }
 
@@ -65,6 +67,10 @@ html[data-personalized="true"] .border-sage {
 
 html[data-personalized="true"] .ring-sage {
   --tw-ring-color: color-mix(in srgb, var(--theme-accent) 35%, transparent) !important;
+}
+
+html.dark[data-personalized="true"] .text-ink {
+  color: #f3f5f7 !important;
 }
 
 .ambient-effect-layer {
