@@ -9,6 +9,9 @@ Frontend/node_modules/
 Frontend/dist/
 Backend/target/
 
+# Local feature planning/spec documents
+/SMART_SPENDING_SUMMARY_SPEC.md
+
 # Machine-specific IDE files
 **/.idea/
 **/.vscode/
