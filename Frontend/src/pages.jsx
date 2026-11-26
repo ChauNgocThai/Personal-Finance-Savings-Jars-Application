@@ -179,7 +179,7 @@ function SmartSpendingSummary() {
     <Card>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="flex items-center gap-2 font-bold text-ink">
+          <h3 className="flex items-center gap-2 font-bold text-ink dark:text-gray-100">
             <span aria-hidden="true">✨</span> Tóm tắt thông minh
           </h3>
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
