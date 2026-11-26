@@ -5,6 +5,7 @@ FinTrack là ứng dụng web giúp theo dõi thu chi cá nhân, quản lý hạ
 ## Tính năng
 
 - **Tổng quan tài chính:** xem thu nhập, chi tiêu, thặng dư và biểu đồ theo ngày, tháng hoặc năm.
+- **Tóm tắt thông minh:** tổng hợp chi tiêu theo ngày, tuần, tháng hoặc năm; so sánh tổng tiền và từng danh mục với kỳ trước; nêu mức tăng/giảm, danh mục chi nhiều nhất và các danh mục mới phát sinh hoặc không còn chi. Có thể chọn trực tiếp ngày, tháng hoặc năm cần xem và quay lại hôm nay.
 - **Giao dịch:** ghi nhận thu nhập/chi tiêu, chọn danh mục và thêm ghi chú.
 - **Ngân sách:** thiết lập hạn mức theo ngày hoặc tháng, quản lý danh mục và thu nhập dự kiến.
 - **Hũ tiết kiệm:** tạo mục tiêu, đặt hạn hoàn thành, nạp/rút tiền và cấu hình tỷ lệ trích tự động từ thu nhập.
@@ -75,6 +76,8 @@ cd Backend
 ## Lưu trữ dữ liệu hiện tại
 
 Ở phiên bản hiện tại, các màn hình frontend dùng dữ liệu mẫu và lưu giao dịch, ngân sách, danh mục, hũ tiết kiệm trong `localStorage` của trình duyệt. Frontend chưa kết nối các thao tác này với API Spring Boot/SQL Server; backend được chạy riêng. Vì vậy dữ liệu frontend được lưu theo trình duyệt và thiết bị, không tự đồng bộ giữa các máy.
+
+Tóm tắt thông minh chỉ phân tích các giao dịch chi tiêu đã lưu trong trình duyệt. Các kỳ đang diễn ra được so sánh theo cùng khoảng thời gian đã trôi qua của kỳ trước; tuần bắt đầu từ thứ Hai. Giao dịch hiện chỉ lưu ngày, chưa lưu giờ, nên so sánh theo ngày là tổng cả ngày chứ không phải đến cùng thời điểm trong ngày. Khi kỳ trước chưa có khoản chi, ứng dụng hiển thị số tiền phát sinh mà không tính phần trăm tăng vô hạn.
 
 Tùy chỉnh giao diện cũng được lưu trong trình duyệt. Tệp hiệu ứng tải lên được lưu trong IndexedDB; xóa dữ liệu trang web của trình duyệt có thể xóa các tùy chỉnh và dữ liệu này.
 
