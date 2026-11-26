@@ -306,21 +306,28 @@ export default function App() {
 
     try {
       const bitmap = await createImageBitmap(file)
-      const scale = Math.min(1980 / bitmap.width, 1080 / bitmap.height, 1)
+      const scale = Math.min(3840 / bitmap.width, 2160 / bitmap.height, 1)
       const canvas = document.createElement('canvas')
       canvas.width = Math.max(1, Math.round(bitmap.width * scale))
       canvas.height = Math.max(1, Math.round(bitmap.height * scale))
 
       const context = canvas.getContext('2d')
       if (!context) throw new Error('Canvas không khả dụng')
-      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
-
-      let background = canvas.toDataURL('image/webp', 0.84)
-      if (!background.startsWith('data:image/webp')) {
+      const encodeBackground = () => {
+        context.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+        const webp = canvas.toDataURL('image/webp', 0.9)
+        if (webp.startsWith('data:image/webp')) return webp
         context.fillStyle = '#ffffff'
         context.fillRect(0, 0, canvas.width, canvas.height)
         context.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
-        background = canvas.toDataURL('image/jpeg', 0.82)
+        return canvas.toDataURL('image/jpeg', 0.88)
+      }
+
+      let background = encodeBackground()
+      for (let attempt = 0; background.length > 2 * 1024 * 1024 && attempt < 8; attempt += 1) {
+        canvas.width = Math.max(1, Math.round(canvas.width * 0.85))
+        canvas.height = Math.max(1, Math.round(canvas.height * 0.85))
+        background = encodeBackground()
       }
       bitmap.close()
 
@@ -606,7 +613,7 @@ export default function App() {
                 className="sr-only"
               />
             </label>
-            <p className="mt-2 text-[11px] text-gray-400">PNG, JPG, WEBP hoặc GIF · tối đa 1980 × 1080 · ảnh gốc tối đa 15 MB</p>
+            <p className="mt-2 text-[11px] text-gray-400">PNG, JPG, WEBP hoặc GIF · xử lý tối đa 3840 × 2160, giữ nguyên tỷ lệ · nên dùng ảnh gốc từ 1920 × 1080 · tối đa 15 MB</p>
             {preferences.background && (
               <div className="mt-3 flex items-center gap-3">
                 <img src={preferences.background} alt="Xem trước ảnh nền" className="h-12 w-16 rounded-lg object-cover" />
